@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Holds the unittests for console.py
+Holds unittests for console.py
 """
 
 from io import StringIO
