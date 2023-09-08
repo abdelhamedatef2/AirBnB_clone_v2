@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 """
-Fab script distributes archive to web servers
+Fab script distributes an archive to web servers
 """
 
 from datetime import datetime
 from fabric.api import *
 import os
+
 
 env.hosts = ["34.229.56.92", "54.236.27.183"]
 env.user = "ubuntu"
@@ -13,7 +14,7 @@ env.user = "ubuntu"
 
 def do_pack():
     """
-        retur archive path if archive has generated correctly.
+        return  archive path if archive has generated correctly.
     """
 
     local("mkdir -p versions")
@@ -29,7 +30,7 @@ def do_pack():
 
 def do_deploy(archive_path):
     """
-        Distribu archive.
+        Distribute archive.
     """
     if os.path.exists(archive_path):
         archived_file = archive_path[9:]
