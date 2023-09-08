@@ -10,7 +10,7 @@ env.user = "ubuntu"
 
 
 def do_pack():
-    """  compress static web folder"""
+    """  compress staatic web folder"""
     n = datetime.now()
     t = f"web_static_{n.year}{n.month}{n.day}{n.hour}{n.minute}{n.second}.tgz"
     local("mkdir -p versions")
