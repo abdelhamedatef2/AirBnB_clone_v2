@@ -1,53 +1,26 @@
 #!/usr/bin/env bash
-# setup server for static deployment of static web clone of Airbnb
-sudo apt-get update -y
-sudo apt-get install nginx -y
-sudo mkdir -p /data/web_static/{releases,shared}/
+# bash script that sets up webstatic
+
+sudo apt-get -y update
+sudo apt-get -y install nginx
+sudo mkdir -p /data/web_static/shared/
 sudo mkdir -p /data/web_static/releases/test/
-sudo tee /data/web_static/releases/test/index.html > /dev/null <<EOT
-<html>
+echo "<html>
   <head>
   <head>
   <body>
     Holberton School
   </body>
-</html>
-EOT
-if [ -e /data/web_static/current ] 
-then
-	sudo rm -rf /data/web_static/current
-fi
-
-sudo ln -s /data/web_static/releases/test /data/web_static/current
-sudo chown -R "$USER":"$USER" /data
-sudo tee /etc/nginx/sites-enabled/default > /dev/null << EOT
-
-server {
-	listen 80;
-	server_name _;
-	root /var/www/html;	
-	
-	add_header X-Served-By \$HOSTNAME;
-	
-	location /redirect_me {
-		return 301 http://midosolutions.tech/;
-	}
-	
-	error_page 404 /custom_404.html;
-	location = /custom_404.html {
-		root /usr/share/nginx/html;
-		internal;
-	}
-
-	
-	location / {
-		try_files \$uri \$uri/ = 404;
-	}
-
-
-	location /hbnb_static/ {
+</html>" | sudo tee /data/web_static/releases/test/index.html
+sudo ln -sf /data/web_static/releases/test/ /data/web_static/current
+sudo chown -R ubuntu:ubuntu /data/
+content=$(cat << 'END HEREDOC'
+	location /hbnb_static {
 		alias /data/web_static/current/;
 	}
-}
-EOT
+END HEREDOC
+)
+echo -e "$content" >> text.txt
+sudo sed -i '/server_name _;/r text.txt' /etc/nginx/sites-available/default
+sudo rm text.txt
 sudo service nginx restart
