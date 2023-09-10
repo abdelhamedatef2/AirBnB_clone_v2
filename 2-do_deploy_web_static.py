@@ -1,51 +1,66 @@
 #!/usr/bin/python3
-"""fabric svript deploy compress file """
-from fabric.api import *
-from datetime import datetime
-import os
+"""fabric config module manage static web deployment
 
+ module contain
+    function:
+    do_pack: bundles compresses all content of web_static to  version folder
+    do_deploy: takes parameter 'archive_path' which is location of the archive file
+"""
+import os
+import fabric.api as api
+from datetime import datetime
+from pathlib import Path
 
 env.hosts = ["34.229.56.92", "54.236.27.183"]
-env.user = "ubuntu"
 
 
 def do_pack():
-    """ func compress static web folder"""
-    n = datetime.now()
-    t = f"web_static_{n.year}{n.month}{n.day}{n.hour}{n.minute}{n.second}.tgz"
-    local("mkdir -p versions")
-    with lcd("./versions"):
-        res = local(f"tar -czvf {t} ../web_static")
-        if res.succeeded:
-            return f"versions/{t}"
-    return None
+    """Bundle convert contents of web_static direct to tgz
+    """
+    version_dir = Path('./versions')
+    if not version_dir.exists():
+        os.mkdir(version_dir)
+    now = datetime.now()
+
+    # absolute path to the compressed file
+    file_name = version_dir / "web_static_{}{}{}{}{}{}.tgz".format(
+            now.year, now.month, now.day,
+            now.hour, now.minute, now.second)
+    try:
+        api.local(f"tar -zcvf {file_name.absolute()} -C web_static .")
+        return str(file_name.absolute())
+    except Exception:
+        return None
 
 
 def do_deploy(archive_path):
-    """func deploy archive file """
-    if not os.path.exists(archive_path):
+    """Deploy archive path to production
+    """
+    if not Path(archive_path).exists():
         return False
-    res = put(local_path=archive_path, remote_path="/tmp/")
-    if res.failed:
+    try:
+        file_name = archive_path.split('/')[-1]
+        file_name_no_ext = file_name.split('.')[0]
+        old_path = '/data/web_static/releases/{}/web_static'.format(
+                file_name_no_ext)
+        new_path = '/data/web_static/releases/{}'.format(
+                file_name_no_ext)
+        curr_path = '/data/web_static/current'
+
+        run_locally = os.getenv("run_locally", None)
+        if run_locally is None:
+            api.local(f'mkdir -p {new_path}')
+            api.local(f'tar -zxf {archive_path} -C {new_path}')
+            api.local(f'rm -rfR {curr_path}')
+            api.local(f'ln -s {new_path} {curr_path}')
+            os.environ['run_locally'] = "True"
+
+        api.put(archive_path, '/tmp/')
+        api.run(f'mkdir -p {new_path}')
+        api.run(f'tar -zxf /tmp/{file_name} -C {new_path}')
+        api.run(f'rm /tmp/{file_name}')
+        api.run(f'rm -rfR {curr_path}')
+        api.run(f'ln -s {new_path} {curr_path}')
+        return True
+    except Exception:
         return False
-    file_name = archive_path.split("/")[-1]
-    remote_path = f"/tmp/{file_name}"
-    with cd("/data/web_static/releases/"):
-        res = sudo(f"tar -xzvf {remote_path}")
-        if res.failed:
-            return False
-    res = sudo(f"rm {remote_path}")
-    if res.failed:
-        return False
-    res = sudo("rm /data/web_static/current")
-    if res.failed:
-        return False
-    folder_old = "/data/web_static/releases/web_static"
-    folder_new = f"/data/web_static/releases/{file_name.split('.')[0]}"
-    res = sudo(f"mv {folder_old} {folder_new}")
-    if res.failed:
-        return False
-    res = sudo(f"ln -s {folder_new} /data/web_static/current")
-    if res.failed:
-        return False
-    return True
