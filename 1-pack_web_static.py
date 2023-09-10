@@ -1,16 +1,29 @@
 #!/usr/bin/python3
-""" fab script """
+"""fabric config module to manage static web deployment
+
+That module contain func do_pack that bundles and compresses
+all content of web_static to  version folder
+"""
+import os
+import fabric.api as api
 from datetime import datetime
-from fabric.api import local, lcd
+from pathlib import Path
 
 
 def do_pack():
-    """ func compres static web folder"""
-    n = datetime.now()
-    t = f"web_static_{n.year}{n.month}{n.day}{n.hour}{n.minute}{n.second}.tgz"
-    local("mkdir -p versions")
-    with lcd("./versions"):
-        res = local(f"tar -czvf {t} ../web_static")
-        if res.succeeded:
-            return f"versions/{t}"
-    return None
+    """Bundle convert contents of web_static direct to tgz
+    """
+    version_dir = Path('./versions')
+    if not version_dir.exists():
+        os.mkdir(version_dir)
+    now = datetime.now()
+
+    # absolute path to the compressed file
+    file_name = version_dir / "web_static_{}{}{}{}{}{}.tgz".format(
+            now.year, now.month, now.day,
+            now.hour, now.minute, now.second)
+    try:
+        api.local(f"tar -zcvf {file_name.absolute()} -C web_static .")
+        return str(file_name.absolute())
+    except Exception:
+        return None
